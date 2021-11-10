@@ -19,5 +19,12 @@
         "Find": "XPATH",
         "Element": "//*[@id=\"pass\"]",
         "Value": "Password"
+    },
+    {
+        "Action": "Click",
+        "Sleep": "1",
+        "Find": "XPATH",
+        "Element": "//*[@id=\"mount_0_0_Xb\"]/div/div[1]/div/div[2]/div[3]/div/div[1]/div[1]/ul/li[4]/span/div/a",
+        "Value": ""
     }
 ]
