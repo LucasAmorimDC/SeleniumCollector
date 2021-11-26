@@ -47,7 +47,7 @@
 
 ### 📋 Pré-requisitos
 
-    O coletor conta com os arquivos externos Steps.json, config.ini, Cromedriver.exe que são essenciais para execução do programa.
+    O coletor conta com os arquivos externos Steps.json, config.ini, Chromedriver.exe que são essenciais para execução do programa.
     
     ## Steps.json
       Arquivo necessário para execução das ações.
@@ -70,4 +70,7 @@
         server = --nome do servidor
         user = --nome de usuario
         pass = --senha
+        
+     ## Chromedriver.exe
+        Essencial para a funcionalidade do coletor, não esqueça de manter sempre atualizado.
 
