@@ -1,32 +1,33 @@
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
-import json
+from selenium.webdriver.common.by import By
 from configparser import ConfigParser
-import cryptocode
-from log import Log
-import pyautogui
+from bs4 import BeautifulSoup
 from time import sleep
+from log import Log
+import pandas as pd
+import cryptocode
+import pyautogui
+import json
+import glob
+import os
+
+
 
 class Functions:
     def __init__(self):
         self.log = Log()
 
-    def Config(self, condition=''):
+    def Config(self, req1, req2):
         try:
             self.config = ConfigParser()
             self.config.read('config.ini')
-            self.url = self.config.get('PLATFORMS', 'url')
-            self.user = cryptocode.decrypt(self.config.get('DADOS', 'user'), 'wow')
-            self.password = cryptocode.decrypt(self.config.get('DADOS', 'password'), 'wow')
-            if condition == 'User':
-                return self.user
-            elif condition == 'Password':
-                return self.password
-            else:
-                return self.url
+            request = self.config.get(req1, req2)
+            if req1 == 'DADOS':
+                request = cryptocode.decrypt(self.config.get(req1, req2), 'wow')
+            return request
         except IOError as error:
             print('Config Error', error)
 
@@ -68,18 +69,21 @@ class Functions:
 
         try:
             self.actions = ActionChains(webdriver)
-
             sleep(int(wait))
+            if action == 'Insert':
+                Functions().BulkInsert()
+            if action == 'Extract':
+                Functions().Extract(webdriver, element, value)
             if action == 'Digitar':
                 element.clear()
                 if value == 'User':
-                    usuario = Functions().Config('User')
-                    element.send_keys(usuario)
+                    user = Functions().Config('DADOS', 'User')
+                    element.send_keys(user)
                 elif value == 'Password':
-                    senha = Functions().Config('Password')
-                    element.send_keys(senha)
+                    password = Functions().Config('DADOS', 'Password')
+                    element.send_keys(password)
                 else:
-                    element.send_keys(valor)
+                    element.send_keys(value)
 
             if action == 'Enter':
                 self.actions.send_keys(Keys.ENTER).perform()
@@ -100,14 +104,39 @@ class Functions:
 
             self.log.debug(f"Action: '{action}' completed successfully.")
             print(f'Action: "{action}" completed successfully.')
-
         except Exception as error:
-            print(f'Element error: {error}')
+            print('Action error: ', error)
 
 
+    def Extract(self, webdriver, element, value):
+
+        try:
+            if not os.path.exists("./Extract/"):
+                os.mkdir("./Extract/")
+            Class = element.get_attribute('class')
+            tag = Functions().Config('CONTENT', 'tag')
+            url = webdriver.page_source
+            soup = BeautifulSoup(url, 'lxml')
+            element = soup.find(tag, attrs={Class})
+            df = pd.read_html(str(element))
+            df[0].to_csv(f'./Extract/{value}.csv', header=False, index=False, mode='a', encoding='UTF-8', sep=',')
+            print(df)
+        except Exception as error:
+            print('Extract error ', error)
 
 
+    def BulkInsert(self):
 
-
-
+        try:
+            for file in glob.glob(f"./Extract/*.csv"):
+                os.system(f'bcp {Functions().Config("SQL", "database")}.'
+                          f'dbo.{Functions().Config("SQL", "table")} '
+                          f'IN {file} -c -C 65001 -t "," -r 0x0a '
+                          f'-S {Functions().Config("SQL", "server")} '
+                          f'-U {Functions().Config("SQL", "user")} '
+                          f'-P {Functions().Config("SQL", "pass")}'
+                          )
+                print(f'{file}: Successfully imported')
+        except Exception as error:
+            print('Insert error: ', error)
 

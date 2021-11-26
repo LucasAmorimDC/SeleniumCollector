@@ -20,12 +20,10 @@ class WebDriver:
                     "profile.default_content_setting_values.notifications": 2,
                 },
             )
-
+            chrome_options.add_experimental_option("excludeSwitches", ['enable-automation'])
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument('--ignore-certificate-errors-spki-list')
             chrome_options.add_argument('--ignore-ssl-errors')
-            # direc = str(path())+ 'selenium'
-            # chrome_options.add_argument("--user-data-dir=" + direc)
 
             web_driver = webdriver.Chrome(options=chrome_options)
 

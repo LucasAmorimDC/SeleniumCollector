@@ -12,8 +12,8 @@ class Main:
     def __init__(self):
         self.ind = 0
         self.log = Log()
-        self.url = Functions().Config()
-        self.webdriver = WebDriver().getDriver()
+        self.url = Functions().Config('PLATFORM', 'url')
+        self.webdriver = WebDriver.getDriver()
         self.webdriver.get(self.url)
         self.webdriver.maximize_window()
         self.dic_steps = dict()
@@ -29,8 +29,10 @@ class Main:
     def open_window(self):
 
         sg.theme('Dark Blue 2')
-        layout = [[sg.Text('Action   '), sg.Combo(['Digitar', 'Enter', 'Click', 'Double_Click'], key='Action')],
-                  [sg.Text('Find      '), sg.Combo(['TAG_NAME', 'CLASS_NAME', 'CSS_SELECTOR', 'ID', 'XPATH', 'IMG'], key='Find'),
+        layout = [[sg.Text('Action   '),
+                   sg.Combo(['Digitar', 'Enter', 'Click', 'Double_Click', 'Extract', 'Insert'], key='Action')],
+                  [sg.Text('Find      '),
+                   sg.Combo(['TAG_NAME', 'CLASS_NAME', 'CSS_SELECTOR', 'ID', 'XPATH', 'IMG'], key='Find'),
                    sg.Text('Sleep   '), sg.Spin(['1', '2', '3', '4', '5'], key='Sleep')],
                   [sg.Text('Element'), sg.InputText(key='Element')],
                   [sg.Text('Value    '), sg.InputText(key='Value')],
@@ -40,14 +42,14 @@ class Main:
         window = sg.Window('Debug Selenium', layout)
 
         while True:
-            self.event, self.values = window.read()
+            self.event, values = window.read()
             if self.event == sg.WIN_CLOSED:
                 break
-            self.dic_steps['Action'] = self.values['Action']
-            self.dic_steps['Sleep'] = self.values['Sleep']
-            self.dic_steps['Find'] = self.values['Find']
-            self.dic_steps['Element'] = self.values['Element']
-            self.dic_steps['Value'] = self.values['Value']
+            self.dic_steps['Action'] = values['Action']
+            self.dic_steps['Sleep'] = values['Sleep']
+            self.dic_steps['Find'] = values['Find']
+            self.dic_steps['Element'] = values['Element']
+            self.dic_steps['Value'] = values['Value']
 
             if self.event == 'Delete':
                 self.list_steps.pop(-1)
@@ -55,15 +57,15 @@ class Main:
                 with open('Steps.json', 'w') as json_file:
                     json.dump(self.list_steps, json_file, indent=4)
                 print('The last action successfully deleted!!')
-                self.event = ''
+
 
             if self.event == 'Save':
                 self.list_steps.append(self.dic_steps.copy())
                 with open('Steps.json', 'w') as json_file:
                     json.dump(self.list_steps, json_file, indent=4)
-                self.event = ''
                 SeleniumActions().Driver(self.webdriver, self.log, self.ind)
                 self.ind += 1
+            self.event = ''
 
 
 class SeleniumActions:
@@ -75,8 +77,10 @@ class SeleniumActions:
         log.debug(f"--- Started Step {ind + 1}/{len(json_steps)} ---")
         print()
         print(f"        --- Started Step {ind + 1}.. ---")
-        self.element = Functions().Element(webdriver, json_steps[ind]['Find'], json_steps[ind]['Element'])
-        Functions().Actions(self.element, json_steps[ind]['Action'], json_steps[ind]['Value'], webdriver, json_steps[ind]['Sleep'], json_steps[ind]['Find'])
+        element = Functions().Element(webdriver, json_steps[ind]['Find'], json_steps[ind]['Element'])
+
+        Functions().Actions(element, json_steps[ind]['Action'], json_steps[ind]['Value'],
+                            webdriver, json_steps[ind]['Sleep'], json_steps[ind]['Find'])
 
     def LoopDriver(self, log, webdriver):
 
@@ -86,12 +90,14 @@ class SeleniumActions:
             log.debug(f"--- Started Step {ind + 1}/{len(Json_File)} ---")
             print()
             print(f"        --- Started Step {ind + 1}/{len(Json_File)} ---")
-            self.element = Functions().Element(webdriver, json_steps['Find'], json_steps['Element'])
-            Functions().Actions(self.element, json_steps['Action'], json_steps['Value'], webdriver, json_steps['Sleep'], json_steps['Find'])
+            element = Functions().Element(webdriver, json_steps['Find'], json_steps['Element'])
+
+            Functions().Actions(element, json_steps['Action'], json_steps['Value'],
+                                webdriver, json_steps['Sleep'], json_steps['Find'])
 
 
 if __name__ == "__main__":
-    if Debug == True:
+    if Debug:
         Main().open_window()
     else:
         Main()

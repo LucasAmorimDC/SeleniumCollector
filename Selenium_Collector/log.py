@@ -21,7 +21,6 @@ class Log:
         logging.getLogger("hpack").propagate = False
         self.filename = f"./_logs/Execution Result {self.timestamp}.log"
         logging.basicConfig(
-            encoding="UTF-8",
             filename=self.filename,
             filemode="a",
             level=logging.DEBUG,
