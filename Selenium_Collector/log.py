@@ -7,7 +7,6 @@ class Log:
     def __init__(self):
         if not os.path.exists("./_logs/"):
             os.makedirs("./_logs/")
-
         self.timestamp = "{:%y-%m-%d}".format(datetime.now())
         logging.getLogger("seleniumwire").setLevel(logging.CRITICAL)
         logging.getLogger("seleniumwire").propagate = False
@@ -19,7 +18,7 @@ class Log:
         logging.getLogger("pysftp").propagate = False
         logging.getLogger("hpack").setLevel(logging.CRITICAL)
         logging.getLogger("hpack").propagate = False
-        self.filename = f"./_logs/Execution Result {self.timestamp}.log"
+        self.filename = f"./_logs/Execution_Result_{self.timestamp}.log"
         logging.basicConfig(
             filename=self.filename,
             filemode="a",

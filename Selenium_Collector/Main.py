@@ -4,36 +4,33 @@ from webdriver import WebDriver
 import PySimpleGUI as sg
 import json
 
-Debug = True
-
 
 class Main:
 
     def __init__(self):
-        self.ind = 0
-        self.log = Log()
-        self.url = Functions().Config('PLATFORM', 'url')
-        self.webdriver = WebDriver.getDriver()
-        self.webdriver.get(self.url)
-        self.webdriver.maximize_window()
-        self.dic_steps = dict()
-        self.Json_File = Functions().Json()
 
-        if self.Json_File:
-            self.list_steps = self.Json_File[:]
-            self.ind = len(self.Json_File)
+        self.ind = 0  # Indice utilizado para acessar o json.
+        self.log = Log()  # Log de registro.
+        self.url = Functions().Json('Collector', 'url')  # Url da plataforma.
+        self.webdriver = WebDriver().getDriver()  # Options webdriver.
+        self.webdriver.get(self.url)  # Get na url.
+        self.Json_File = Functions().Json()  # Recebe o Steps_json.
+
+        if self.Json_File['Steps']:  # Verificação para saber se o Steps_json está vazio .
             SeleniumActions().LoopDriver(self.log, self.webdriver)
-        else:
-            self.list_steps = list()
 
     def open_window(self):
 
         sg.theme('Dark Blue 2')
         layout = [[sg.Text('Action   '),
-                   sg.Combo(['Digitar', 'Enter', 'Click', 'Double_Click', 'Extract', 'Insert'], key='Action')],
+                   sg.Combo(['Digitar', 'Enter', 'Click', 'Click_js', 'Double_Click', 'Iframe', 'IframeOFF', 'Link',
+                             'Attribute_ID', 'set_class', 'Alert', 'New_Pag', 'Close', 'Refresh', 'Clear'],
+                            key='Action'),
+                   sg.Checkbox('Search_element', default=True, key='Search')],
                   [sg.Text('Find      '),
-                   sg.Combo(['TAG_NAME', 'CLASS_NAME', 'CSS_SELECTOR', 'ID', 'XPATH', 'IMG'], key='Find'),
-                   sg.Text('Sleep   '), sg.Spin(['1', '2', '3', '4', '5'], key='Sleep')],
+                   sg.Combo(['CSS_SELECTOR', 'ID', 'XPATH', 'Attribute_ID', 'Seletor_Js'],
+                            key='Find'),
+                   sg.Text('Sleep   '), sg.Spin(['0', '1', '2', '3', '4', '5'], key='Sleep')],
                   [sg.Text('Element'), sg.InputText(key='Element')],
                   [sg.Text('Value    '), sg.InputText(key='Value')],
                   [sg.Button('Save'), sg.Button('Delete')],
@@ -45,59 +42,65 @@ class Main:
             self.event, values = window.read()
             if self.event == sg.WIN_CLOSED:
                 break
-            self.dic_steps['Action'] = values['Action']
-            self.dic_steps['Sleep'] = values['Sleep']
-            self.dic_steps['Find'] = values['Find']
-            self.dic_steps['Element'] = values['Element']
-            self.dic_steps['Value'] = values['Value']
+            self.dic_steps = {
+                "Search": f"{str(values['Search'])}",
+                "Action": f"{values['Action']}",
+                "Sleep": f"{values['Sleep']}",
+                "Find": f"{values['Find']}",
+                "Element": f"{values['Element']}",
+                "Value": f"{values['Value']}"
+            }
 
             if self.event == 'Delete':
-                self.list_steps.pop(-1)
+                self.Json_File['Steps'].pop(-1)
                 self.ind -= 1
-                with open('Steps.json', 'w') as json_file:
-                    json.dump(self.list_steps, json_file, indent=4)
+                with open('Steps.json', 'w') as json_Steps:
+                    json.dump(self.Json_File, json_Steps, indent=4)
                 print('The last action successfully deleted!!')
 
-
             if self.event == 'Save':
-                self.list_steps.append(self.dic_steps.copy())
-                with open('Steps.json', 'w') as json_file:
-                    json.dump(self.list_steps, json_file, indent=4)
+                self.Json_File['Steps'].append(self.dic_steps)
+                with open('Steps.json', 'w') as json_Steps:
+                    json.dump(self.Json_File, json_Steps, indent=4)
                 SeleniumActions().Driver(self.webdriver, self.log, self.ind)
                 self.ind += 1
+
             self.event = ''
 
 
 class SeleniumActions:
+    def __init__(self):
+        self.Json_Steps = Functions().Json('Steps')
 
     def Driver(self, webdriver, log, ind):
 
-        json_steps = Functions().Json()
         log.debug(f"")
-        log.debug(f"--- Started Step {ind + 1}/{len(json_steps)} ---")
+        log.debug(f"--- Started Step {ind + 1}/{len(self.Json_Steps)} ---")
         print()
         print(f"        --- Started Step {ind + 1}.. ---")
-        element = Functions().Element(webdriver, json_steps[ind]['Find'], json_steps[ind]['Element'])
+        if self.Json_Steps[ind]['Search'] == 'True':
+            element = Functions().Element(webdriver, self.Json_Steps[ind]['Find'], self.Json_Steps[ind]['Element'])
 
-        Functions().Actions(element, json_steps[ind]['Action'], json_steps[ind]['Value'],
-                            webdriver, json_steps[ind]['Sleep'], json_steps[ind]['Find'])
+        Functions().Actions(self.Json_Steps[ind]['Action'], self.Json_Steps[ind]['Value'],
+                            webdriver, self.Json_Steps[ind]['Sleep'], element)
 
     def LoopDriver(self, log, webdriver):
 
-        Json_File = Functions().Json()
-        for ind, json_steps in enumerate(Json_File):
+        for ind, json_steps in enumerate(self.Json_Steps):
             log.debug(f"")
-            log.debug(f"--- Started Step {ind + 1}/{len(Json_File)} ---")
+            log.debug(f"--- Started Step {ind + 1}/{len(self.Json_Steps)} ---")
             print()
-            print(f"        --- Started Step {ind + 1}/{len(Json_File)} ---")
-            element = Functions().Element(webdriver, json_steps['Find'], json_steps['Element'])
+            print(f"        --- Started Step {ind + 1}/{len(self.Json_Steps)} ---")
+            if json_steps['Search'] == 'True':
+                element = Functions().Element(webdriver, json_steps['Find'], json_steps['Element'])
 
-            Functions().Actions(element, json_steps['Action'], json_steps['Value'],
-                                webdriver, json_steps['Sleep'], json_steps['Find'])
+            Functions().Actions(json_steps['Action'], json_steps['Value'], webdriver,
+                                json_steps['Sleep'], element)
 
 
 if __name__ == "__main__":
-    if Debug:
+    Debug = Functions().Json('Collector', 'debug')
+    if Debug == 'True':
         Main().open_window()
-    else:
+    elif Debug == 'False':
         Main()

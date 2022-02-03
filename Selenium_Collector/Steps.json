@@ -1,23 +1,27 @@
-[
+{
+  "Collector": [
     {
-        "Action": "Digitar",
-        "Sleep": "1",
-        "Find": "XPATH",
-        "Element": "//*[@id=\"email\"]",
-        "Value": "User"
-    },
-    {
-        "Action": "Digitar",
-        "Sleep": "1",
-        "Find": "XPATH",
-        "Element": "//*[@id=\"pass\"]",
-        "Value": "Password"
-    },
-    {
-        "Action": "Enter",
-        "Sleep": "1",
-        "Find": "XPATH",
-        "Element": "//*[@id=\"pass\"]",
-        "Value": "Password"
+      "headless": "False",
+      "directory": "",
+      "profile": "",
+      "debug": "True",
+      "url": ""
     }
-]
+  ],
+  "Login": [
+    {
+      "user": "",
+      "pass": ""
+    }
+  ],
+    "Steps":
+    [
+    {
+        "Search": "",
+        "Action": "",
+        "Sleep": "",
+        "Find": "",
+        "Element": "",
+        "Value": ""
+    }
+]}

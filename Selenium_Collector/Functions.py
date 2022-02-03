@@ -3,58 +3,51 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from configparser import ConfigParser
-from bs4 import BeautifulSoup
 from time import sleep
 from log import Log
-import pandas as pd
 import cryptocode
-import pyautogui
 import json
-import glob
 import os
-
 
 
 class Functions:
     def __init__(self):
         self.log = Log()
+        self._directory = self.Json('Collector', 'directory')
 
-    def Config(self, req1, req2):
-        try:
-            self.config = ConfigParser()
-            self.config.read('config.ini')
-            request = self.config.get(req1, req2)
-            if req1 == 'DADOS':
-                request = cryptocode.decrypt(self.config.get(req1, req2), 'wow')
-            return request
-        except IOError as error:
-            print('Config Error', error)
-
-    def Json(self):
+    def Json(self, req1=None, req2=None):
         try:
             with open(r".\Steps.json", "r") as json_file:
                 Json_Steps = json.load(json_file)
-                return Json_Steps
 
+                if req1 is None:
+                    return Json_Steps
+                elif req1 == 'Steps':
+                    return Json_Steps[req1]
+                elif req1 == 'Login':
+                    return cryptocode.decrypt(Json_Steps[req1][0][req2], 'wow')
+                else:
+                    return Json_Steps[req1][0][req2]
         except Exception as error:
             print('Json Error', error)
-            Json_Steps = False
             return Json_Steps
             pass
 
     def Element(self, webdriver, find, element_html):
+
         try:
-            if find == 'TAG_NAME':
-                element = WebDriverWait(webdriver, 10).until(EC.presence_of_element_located((By.TAG_NAME, element_html)))
-            elif find == 'CLASS_NAME':
-                element = WebDriverWait(webdriver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, element_html)))
-            elif find == 'CSS_SELECTOR':
-                element = WebDriverWait(webdriver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, element_html)))
+
+            if find == 'CSS_SELECTOR':
+                element = WebDriverWait(webdriver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, element_html)))
             elif find == 'ID':
                 element = WebDriverWait(webdriver, 10).until(EC.presence_of_element_located((By.ID, element_html)))
             elif find == 'XPATH':
                 element = WebDriverWait(webdriver, 10).until(EC.presence_of_element_located((By.XPATH, element_html)))
+            elif find == 'Attribute_ID':
+                element = webdriver.execute_script(f"return document.getElementById('{element_html}')")
+            elif find == 'Seletor_Js':
+                element = webdriver.execute_script(f"return document.querySelector('{element_html}')")
             else:
                 return
             self.log.debug(f"Element {element_html} found!")
@@ -63,24 +56,44 @@ class Functions:
         except Exception as error:
             print('Element not found: ', error)
 
-
-
-    def Actions(self, element, action, value, webdriver, wait, find):
+    def Actions(self, action, value, webdriver, wait, element=None):
 
         try:
             self.actions = ActionChains(webdriver)
             sleep(int(wait))
-            if action == 'Insert':
-                Functions().BulkInsert()
-            if action == 'Extract':
-                Functions().Extract(webdriver, element, value)
+            if element:
+                self.actions.move_to_element(element)
+
+            if action == 'Link':
+                webdriver.get(value)
+
+            """ Ação para abrir uma nova aba na URL desejada """
+            if action == 'New_Pag':
+                url = value
+                webdriver.execute_script(f"window.open('{url}', 'new_window')")
+
+            if action == 'Close':
+                webdriver.close()
+
+            if action == 'Refresh':
+                webdriver.refresh()
+
+            if action == 'Iframe':
+                webdriver.switch_to.frame(element)
+
+            elif action == 'IframeOFF':
+                webdriver.switch_to.default_content()
+
+            if action == 'set_class':
+                webdriver.execute_script(f"arguments[0].setAttribute('class', '{value}')", element)
+
             if action == 'Digitar':
                 element.clear()
                 if value == 'User':
-                    user = Functions().Config('DADOS', 'User')
+                    user = Functions().Json('Login', 'user')
                     element.send_keys(user)
-                elif value == 'Password':
-                    password = Functions().Config('DADOS', 'Password')
+                elif value == 'Pass':
+                    password = Functions().Json('Login', 'pass')
                     element.send_keys(password)
                 else:
                     element.send_keys(value)
@@ -88,55 +101,46 @@ class Functions:
             if action == 'Enter':
                 self.actions.send_keys(Keys.ENTER).perform()
 
-            if action == 'Click':
-                if find == 'IMG':
-                    img = pyautogui.locateOnScreen(value)
-                    sleep(int(wait * 2))
-                    pyautogui.moveTo(img)
-                    sleep(int(wait * 2))
-                    pyautogui.click()
-                else:
-                    self.actions.move_to_element(element)
-                    self.actions.click(element).perform()
+            if action == "Click_js":
+                webdriver.execute_script("arguments[0].click();", element)
 
-            if action == "Double_Click":
-                self.actions.double_click(element).perform()
+            # def multiple_file_types(self, *patterns):
+            #     os.chdir(r"{}".format(self._directory))
+            #     return it.chain.from_iterable(glob.iglob(pattern) for pattern in patterns)
+
+            if action == 'Click':
+                self.actions.click(element).perform()
+
+            if action == "Attribute_ID":
+                el_href = element.get_attribute('href')
+                webdriver.execute_script(f"window.open('{el_href}', 'new_window')")
+
+            """ Ação para aceitar alerta do navegador """
+            if action == "Alert":
+                WebDriverWait(webdriver, 3).until(EC.alert_is_present(),
+                                                  'Tempo limite esgotado ao aguardar a presença do alerta' +
+                                                  'pop-up de confirmação para aparecer.')
+
+                alert = webdriver.switch_to.alert
+                alert.accept()
+
+            if action == 'Clear':
+                for file in os.listdir(self._directory):
+                    print(file, value)
+                    if file == value:
+                        os.remove(fr"{self._directory}/{file}")
 
             self.log.debug(f"Action: '{action}' completed successfully.")
+
+            if action == "Download":
+                Download = True
+                while Download:
+                    for file in os.listdir(self._directory):
+                        if file[:12] == 'Hagent Login':
+                            os.chdir(r"{}".format(self._directory))
+                            os.rename(fr"{self._directory}/{file}", value)
+                            Download = False
+
             print(f'Action: "{action}" completed successfully.')
         except Exception as error:
             print('Action error: ', error)
-
-
-    def Extract(self, webdriver, element, value):
-
-        try:
-            if not os.path.exists("./Extract/"):
-                os.mkdir("./Extract/")
-            Class = element.get_attribute('class')
-            tag = Functions().Config('CONTENT', 'tag')
-            url = webdriver.page_source
-            soup = BeautifulSoup(url, 'lxml')
-            element = soup.find(tag, attrs={Class})
-            df = pd.read_html(str(element))
-            df[0].to_csv(f'./Extract/{value}.csv', header=False, index=False, mode='a', encoding='UTF-8', sep=',')
-            print(df)
-        except Exception as error:
-            print('Extract error ', error)
-
-
-    def BulkInsert(self):
-
-        try:
-            for file in glob.glob(f"./Extract/*.csv"):
-                os.system(f'bcp {Functions().Config("SQL", "database")}.'
-                          f'dbo.{Functions().Config("SQL", "table")} '
-                          f'IN {file} -c -C 65001 -t "," -r 0x0a '
-                          f'-S {Functions().Config("SQL", "server")} '
-                          f'-U {Functions().Config("SQL", "user")} '
-                          f'-P {Functions().Config("SQL", "pass")}'
-                          )
-                print(f'{file}: Successfully imported')
-        except Exception as error:
-            print('Insert error: ', error)
-
